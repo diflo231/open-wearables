@@ -95,7 +95,7 @@ async def get_workout_events(
                 "last_name": user_data.get("last_name"),
             }
         except ValueError as e:
-            return {"error": f"User not found: {user_id}", "details": str(e)}
+            raise ValueError(f"User not found: {user_id}. {e}") from e
 
         # Fetch workout data
         workouts_response = await client.get_workouts(
@@ -173,7 +173,7 @@ async def get_workout_events(
 
     except ValueError as e:
         logger.error(f"API error in get_workout_events: {e}")
-        return {"error": str(e)}
+        raise RuntimeError(str(e)) from e
     except Exception as e:
         logger.exception(f"Unexpected error in get_workout_events: {e}")
-        return {"error": f"Failed to fetch workout events: {e}"}
+        raise RuntimeError("Failed to fetch workout events") from e

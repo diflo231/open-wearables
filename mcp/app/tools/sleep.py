@@ -82,7 +82,7 @@ async def get_sleep_summary(
                 "last_name": user_data.get("last_name"),
             }
         except ValueError as e:
-            return {"error": f"User not found: {user_id}", "details": str(e)}
+            raise ValueError(f"User not found: {user_id}. {e}") from e
 
         # Fetch sleep data
         sleep_response = await client.get_sleep_summaries(
@@ -141,7 +141,7 @@ async def get_sleep_summary(
 
     except ValueError as e:
         logger.error(f"API error in get_sleep_summary: {e}")
-        return {"error": str(e)}
+        raise RuntimeError(str(e)) from e
     except Exception as e:
         logger.exception(f"Unexpected error in get_sleep_summary: {e}")
-        return {"error": f"Failed to fetch sleep summary: {e}"}
+        raise RuntimeError("Failed to fetch sleep summary") from e
