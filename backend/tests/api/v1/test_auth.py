@@ -97,7 +97,12 @@ class TestLogin:
         assert response.status_code in [400, 422]
 
     def test_login_empty_credentials(self, client: TestClient, api_v1_prefix: str) -> None:
-        """Test login fails with empty credentials."""
+        """Test login fails with empty credentials.
+
+        Empty strings fail OAuth2PasswordRequestForm validation (treated as missing
+        fields) before the request reaches the credential check, so the response is
+        a 400 validation error rather than a 401 authentication error.
+        """
         # Act
         response = client.post(
             f"{api_v1_prefix}/auth/login",
@@ -105,7 +110,7 @@ class TestLogin:
         )
 
         # Assert
-        assert response.status_code == 401
+        assert response.status_code == 400
 
 
 class TestLogout:

@@ -808,10 +808,14 @@ class TestGetSleepSessions:
         """sleep_duration_seconds should be None if SleepDetails has no total duration."""
         user = UserFactory()
         mapping = DataSourceFactory(user=user, source="oura")
+        start = datetime(2026, 4, 10, 23, 0, tzinfo=timezone.utc)
+        end = datetime(2026, 4, 11, 7, 0, tzinfo=timezone.utc)
         record = EventRecordFactory(
             mapping=mapping,
             category="sleep",
             type_="sleep",
+            start_datetime=start,
+            end_datetime=end,
             duration_seconds=28800,
         )
 
