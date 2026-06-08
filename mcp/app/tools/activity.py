@@ -105,7 +105,7 @@ async def get_activity_summary(
                 "last_name": user_data.get("last_name"),
             }
         except ValueError as e:
-            raise ValueError(f"User not found: {user_id}. {e}") from e
+            raise ValueError(f"User not found: {user_id}. {str(e)}") from e
 
         # Fetch activity data
         activity_response = await client.get_activity_summaries(
@@ -204,7 +204,7 @@ async def get_activity_summary(
 
     except ValueError as e:
         logger.error(f"API error in get_activity_summary: {e}")
-        raise RuntimeError(str(e)) from e
+        raise
     except Exception as e:
         logger.exception(f"Unexpected error in get_activity_summary: {e}")
-        raise RuntimeError("Failed to fetch activity summary") from e
+        raise RuntimeError(f"Failed to fetch activity summary: {e}") from e

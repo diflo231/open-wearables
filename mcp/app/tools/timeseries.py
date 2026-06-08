@@ -114,7 +114,7 @@ async def get_timeseries(
                 "last_name": user_data.get("last_name"),
             }
         except ValueError as e:
-            raise ValueError(f"User not found: {user_id}. {e}") from e
+            raise ValueError(f"User not found: {user_id}. {str(e)}") from e
 
         # Walk cursor pagination until exhausted or safety ceiling hit.
         records: list[dict[str, Any]] = []
@@ -187,7 +187,7 @@ async def get_timeseries(
 
     except ValueError as e:
         logger.error(f"API error in get_timeseries: {e}")
-        raise RuntimeError(str(e)) from e
+        raise
     except Exception as e:
         logger.exception(f"Unexpected error in get_timeseries: {e}")
-        raise RuntimeError("Failed to fetch time-series samples") from e
+        raise RuntimeError(f"Failed to fetch time-series samples: {e}") from e

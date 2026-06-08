@@ -71,7 +71,7 @@ async def get_users(search: str | None = None, limit: int = 10) -> dict:
 
     except ValueError as e:
         logger.error(f"API error in get_users: {e}")
-        raise RuntimeError(str(e)) from e
+        raise
     except Exception as e:
         logger.exception(f"Unexpected error in get_users: {e}")
-        raise RuntimeError("Failed to fetch users") from e
+        raise RuntimeError(f"Failed to fetch users: {e}") from e
