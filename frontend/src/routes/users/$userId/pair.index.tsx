@@ -7,12 +7,21 @@ import {
   X,
   Lock,
   Loader2,
+  Smartphone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useOAuthConnect } from '@/hooks/use-oauth-connect';
 import { useOAuthProviders } from '@/hooks/api/use-oauth-providers';
 import { useUserConnections } from '@/hooks/api/use-health';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { API_CONFIG } from '@/lib/api/config';
 import { isAuthenticated } from '@/lib/auth/session';
 
@@ -33,8 +42,11 @@ function PairWearablePage() {
   const { connectionState, connectingProvider, error, connect, reset } =
     useOAuthConnect({ userId, redirectUrl });
 
-  const { data: apiProviders, isLoading } = useOAuthProviders(true, true);
+  const { data: apiProviders, isLoading } = useOAuthProviders(false, true);
   const { data: connections } = useUserConnections(userId, isAuthenticated());
+  const [mobileInfoProviderId, setMobileInfoProviderId] = useState<
+    string | null
+  >(null);
 
   const connectedProviders = useMemo(() => {
     if (!connections) return new Set<string>();
@@ -49,15 +61,32 @@ function PairWearablePage() {
       return {
         id: apiProvider.provider,
         name: apiProvider.name,
-        description: 'Connect your device',
+        description: apiProvider.has_cloud_api
+          ? 'Connect your device'
+          : 'Syncs through the Open Wearables mobile app',
         logoPath: apiProvider.icon_url
           ? `${API_CONFIG.baseUrl}${apiProvider.icon_url}`
           : '',
         isAvailable: apiProvider.is_enabled,
         isConnected: connectedProviders.has(apiProvider.provider),
+        requiresMobileApp: !apiProvider.has_cloud_api,
       };
     });
   }, [apiProviders, connectedProviders]);
+
+  const cloudProviders = useMemo(
+    () => displayProviders.filter((p) => p.isAvailable && !p.requiresMobileApp),
+    [displayProviders]
+  );
+
+  const mobileAppProviders = useMemo(
+    () => displayProviders.filter((p) => p.isAvailable && p.requiresMobileApp),
+    [displayProviders]
+  );
+
+  const mobileInfoProvider = mobileAppProviders.find(
+    (p) => p.id === mobileInfoProviderId
+  );
 
   const connectingProviderData = connectingProvider
     ? displayProviders.find((p) => p.id === connectingProvider)
@@ -118,64 +147,116 @@ function PairWearablePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, y: -10 }}
-            className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl"
+            className="relative z-10 flex flex-col items-center gap-12 w-full max-w-4xl"
           >
             {isLoading ? (
-              <div className="col-span-2 flex justify-center py-12">
+              <div className="flex justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-zinc-500" />
               </div>
             ) : (
-              displayProviders
-                .filter((p) => p.isAvailable)
-                .map((provider, index) => (
-                  <motion.button
-                    key={provider.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05, duration: 0.3 }}
-                    onClick={() => handleConnect(provider.id)}
-                    disabled={provider.isConnected}
-                    className={`group relative flex flex-col items-center text-center p-10 rounded-2xl bg-zinc-900/40 border transition-all duration-300 ease-out outline-none focus:ring-2 focus:ring-white/20 ${
-                      provider.isConnected
-                        ? 'border-emerald-500/20 cursor-default'
-                        : 'border-white/5 hover:bg-zinc-900/80 hover:border-white/10'
-                    }`}
-                  >
-                    {/* Brand Logo */}
-                    <div className="mb-8 flex items-center justify-center h-20 w-20 bg-white rounded-2xl shadow-lg shadow-black/20 group-hover:scale-105 transition-transform duration-300">
-                      <img
-                        src={provider.logoPath}
-                        alt={`${provider.name} logo`}
-                        className="w-14 h-14 object-contain"
-                      />
-                    </div>
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                  {cloudProviders.map((provider, index) => (
+                    <motion.button
+                      key={provider.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05, duration: 0.3 }}
+                      onClick={() => handleConnect(provider.id)}
+                      disabled={provider.isConnected}
+                      className={`group relative flex flex-col items-center text-center p-10 rounded-2xl bg-zinc-900/40 border transition-all duration-300 ease-out outline-none focus:ring-2 focus:ring-white/20 ${
+                        provider.isConnected
+                          ? 'border-emerald-500/20 cursor-default'
+                          : 'border-white/5 hover:bg-zinc-900/80 hover:border-white/10'
+                      }`}
+                    >
+                      {/* Brand Logo */}
+                      <div className="mb-8 flex items-center justify-center h-20 w-20 bg-white rounded-2xl shadow-lg shadow-black/20 group-hover:scale-105 transition-transform duration-300">
+                        <img
+                          src={provider.logoPath}
+                          alt={`${provider.name} logo`}
+                          className="w-14 h-14 object-contain"
+                        />
+                      </div>
 
-                    {/* Text */}
-                    <h3 className="text-xl font-medium text-white mb-3">
-                      {provider.name}
-                    </h3>
-                    <p className="text-base text-zinc-500 max-w-xs leading-relaxed">
-                      {provider.description}
+                      {/* Text */}
+                      <h3 className="text-xl font-medium text-white mb-3">
+                        {provider.name}
+                      </h3>
+                      <p className="text-base text-zinc-500 max-w-xs leading-relaxed">
+                        {provider.description}
+                      </p>
+
+                      {/* Connect indicator */}
+                      <div className="mt-8 flex items-center gap-1.5 text-base font-medium transition-colors">
+                        {provider.isConnected ? (
+                          <>
+                            <Check className="w-4 h-4 text-emerald-400" />
+                            <span className="text-emerald-400">Connected</span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="text-zinc-200 group-hover:text-white">
+                              Connect
+                            </span>
+                            <ChevronRight className="w-4 h-4 stroke-[1.5] text-zinc-200 group-hover:text-white" />
+                          </>
+                        )}
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+
+                {mobileAppProviders.length > 0 && (
+                  <div className="w-full">
+                    <p className="text-sm text-zinc-500 mb-4 text-center">
+                      Available through the Open Wearables mobile app
                     </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      {mobileAppProviders.map((provider, index) => (
+                        <motion.button
+                          key={provider.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05, duration: 0.3 }}
+                          onClick={() => setMobileInfoProviderId(provider.id)}
+                          className="group relative flex flex-col items-center text-center p-6 rounded-2xl bg-zinc-900/40 border border-white/5 hover:bg-zinc-900/80 hover:border-white/10 transition-all duration-300 ease-out outline-none focus:ring-2 focus:ring-white/20"
+                        >
+                          {/* Brand Logo */}
+                          <div className="mb-4 flex items-center justify-center h-14 w-14 bg-white rounded-xl shadow-lg shadow-black/20 group-hover:scale-105 transition-transform duration-300">
+                            <img
+                              src={provider.logoPath}
+                              alt={`${provider.name} logo`}
+                              className="w-9 h-9 object-contain"
+                            />
+                          </div>
 
-                    {/* Connect indicator */}
-                    <div className="mt-8 flex items-center gap-1.5 text-base font-medium transition-colors">
-                      {provider.isConnected ? (
-                        <>
-                          <Check className="w-4 h-4 text-emerald-400" />
-                          <span className="text-emerald-400">Connected</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-zinc-200 group-hover:text-white">
-                            Connect
-                          </span>
-                          <ChevronRight className="w-4 h-4 stroke-[1.5] text-zinc-200 group-hover:text-white" />
-                        </>
-                      )}
+                          <h3 className="text-base font-medium text-white mb-2">
+                            {provider.name}
+                          </h3>
+
+                          {provider.isConnected ? (
+                            <div className="flex items-center gap-1.5 text-sm font-medium">
+                              <Check className="w-4 h-4 text-emerald-400" />
+                              <span className="text-emerald-400">
+                                Connected
+                              </span>
+                            </div>
+                          ) : (
+                            <Badge
+                              variant="outline"
+                              className="gap-1.5 text-zinc-400 group-hover:text-zinc-200"
+                            >
+                              <Smartphone className="w-3 h-3" />
+                              Via mobile app
+                            </Badge>
+                          )}
+                        </motion.button>
+                      ))}
                     </div>
-                  </motion.button>
-                ))
+                  </div>
+                )}
+              </>
             )}
           </motion.div>
         )}
@@ -246,6 +327,31 @@ function PairWearablePage() {
         <Lock className="w-4 h-4 stroke-[1.5]" />
         <span>Your data is encrypted and secure</span>
       </motion.div>
+
+      {/* Mobile app connection guidance */}
+      <Dialog
+        open={mobileInfoProvider !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setMobileInfoProviderId(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Smartphone className="w-5 h-5 text-zinc-400" />
+              Connect {mobileInfoProvider?.name} via the mobile app
+            </DialogTitle>
+            <DialogDescription>
+              {mobileInfoProvider?.name} doesn't offer a direct browser
+              connection — it syncs through the Open Wearables mobile app. Open
+              the app on your phone, sign in to this account, and follow the
+              in-app steps to link {mobileInfoProvider?.name}. If you don't have
+              the app or an invitation code yet, ask whoever referred you to
+              this page to set one up for you.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
