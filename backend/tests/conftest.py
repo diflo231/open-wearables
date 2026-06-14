@@ -14,6 +14,11 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 from urllib.parse import urlparse
 
+# Set test environment before importing app modules
+os.environ["ENV"] = "test"
+os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
+os.environ["MASTER_KEY"] = "dGVzdC1tYXN0ZXIta2V5LWZvci10ZXN0aW5nLW9ubHk="  # base64 test key
+
 import pytest
 import redis as redis_lib
 from fastapi.testclient import TestClient
@@ -29,11 +34,6 @@ from app.main import api
 from app.models import SeriesTypeDefinition
 from app.schemas.enums import SERIES_TYPE_DEFINITIONS
 from tests import factories
-
-# Set test environment before importing app modules
-os.environ["ENV"] = "test"
-os.environ["SECRET_KEY"] = "test-secret-key-for-testing-only"
-os.environ["MASTER_KEY"] = "dGVzdC1tYXN0ZXIta2V5LWZvci10ZXN0aW5nLW9ubHk="  # base64 test key
 
 
 @pytest.fixture(scope="session")
